@@ -1,21 +1,31 @@
+require("hs.ipc")
+
 local langToSourceID = {
     hebrew = "com.apple.keylayout.Hebrew",
-    english = "com.apple.keylayout.US",
-    spanish = "com.apple.keylayout.Spanish-ISO"
+    english = "com.apple.keylayout.ABC"
 }
 
-local appWatcher = nil
+local pythonPath = "/usr/bin/python3"
 
 function switchInputLanguage(appName)
-    local script = os.getenv("HOME") .. "/.hammerspoon/lang_switcher.py"
-    local command = script .. " '" .. appName .. "'"
-    local ok, lang, _ = hs.osascript.applescript(
-        'do shell script "' .. command .. '"'
-    )
+    local scriptPath = os.getenv("HOME") .. "/.hammerspoon/lang_switcher.py"
+    local command = scriptPath .. " '" .. appName .. "'"
 
-    if ok and lang ~= "" and langToSourceID[lang] then
-        hs.keycodes.currentSourceID(langToSourceID[lang])
-        hs.alert.show("🌐 " .. lang .. " input activated for " .. appName)
+    local output, success, _, _ = hs.execute(command)
+
+    if success and output then
+        output = output:gsub("%s+", "") -- Trim whitespace
+
+        local currentSource = hs.keycodes.currentSourceID()
+
+        if langToSourceID[output] and currentSource ~= langToSourceID[output] then
+            hs.keycodes.currentSourceID(langToSourceID[output])
+            hs.alert.show("🌐 " .. output .. " input activated for " .. appName)
+        else
+            print("🟢 Already in the correct language, no switch needed.")
+        end
+    else
+        print("⚠️ No config for this app or command failed.")
     end
 end
 
